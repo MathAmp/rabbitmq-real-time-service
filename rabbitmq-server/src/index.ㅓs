@@ -1,0 +1,37 @@
+import amqp , { Connection, Channel} from 'amqplib/callback_api'
+
+//amqp://admin:admin@localhost admin:admin = rabbitmq 계정:암호
+amqp.connect('amqp://admin:admin@localhost', function(error0: any, connection: Connection) {
+    if (error0) {
+        throw error0;
+    }
+
+    connection.createChannel(function(error1:any , channel: Channel) {
+        if (error1) {
+            throw error1;
+        }
+
+        //queue name
+        var queue: string = 'test';
+
+        /*
+        * queue가 없으면 만들어줌
+        * durable : true -> queue 데이터를  rabbitmq가 재시작해도 가지고 있음(소비하기전까지)
+        */
+        channel.assertQueue(queue, {
+            durable: true
+        });
+        setInterval(sendToQueue, 1000, channel, queue)
+    });
+
+    setTimeout(function() {
+        connection.close();
+        process.exit(0);
+    }, 50000);
+});
+
+function sendToQueue(channel: Channel, queue: any){
+  var msg: string = 'Hello World! transDate:' + new Date();
+  channel.sendToQueue(queue, Buffer.from(msg));
+  console.log(" [x] Sent %s", msg);
+}
