@@ -43,19 +43,22 @@ rabbitMQHandler((connection: Connection) => {
       if (err) {
         throw new Error(err);
       }
-      var exchange = 'logs';
+      
       var mainQueue = 'main';
-      var mainQueueTest = 'main.test';
+      var exchange = 'test';
       var msg = process.argv.slice(2).join('') || 'hello world';
 
-
-      channel.assertQueue( mainQueueTest , {exclusive: true}, (err: any, queue: any ) => {
+      channel.assertExchange(exchange, 'fanout', {
+        durable: false
+      });
+      channel.assertQueue( mainQueue , {exclusive: true}, (err: any, queue: any ) => {
         if (err) {
           throw new Error(err)
         }
-        console.log(queue)
-        channel.bindQueue(queue.queue, mainQueue, '')
+       
+        channel.bindQueue(queue.queue, exchange, '')
         channel.consume(queue.queue, (msg: any) => {
+          console.log(queue)
           var result = JSON.stringify({
             result: Object.values(
               JSON.parse(msg.content.toString())
@@ -73,19 +76,23 @@ rabbitMQHandler((connection: Connection) => {
         }})
     })
   })
-
+// channel.close();
 
 router.route('/calc/sum').post((req, res) => {
   rabbitMQHandler((connection: Connection) => {
     connection.createChannel((err: any, channel: Channel) => {
       if (err) {
+        console.log(err)
         throw new Error(err)
+
       }
+
+      console.log(req.body)
       var mainQueue = 'main';
-      var mainQueueTest = 'main.test';
+      var exchange = 'test';
       var msg = JSON.stringify({task: req.body });
       // post로 받아온 메세지 mainQueue로 발행
-      channel.publish(mainQueue, mainQueueTest,  Buffer.from(msg), {persistent: false})
+      channel.publish(exchange, '',  Buffer.from(msg), { persistent: false })
       channel.close(() => {connection.close()})
     })
     res.end()
